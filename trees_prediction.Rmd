@@ -31,30 +31,35 @@ looong <- str_count(twitter.coded$all_tweets, "\\w*([a-яА-Я])\\1\\1+\\w*") ##
 #looong_punct <- str_count(twitter.coded$all_tweets, "\\w*([[]])\\1\\1+\\w*") ##слова с удл. гласными
 
 twitter.coded$clean <- str_to_lower(twitter.coded$all_tweets) #нижний регистр
-twitter.coded$clean <- str_replace(twitter.coded$clean , "@[[:word:]]+", "USERID") #заменить mentions
-twitter.coded$clean <- str_replace(twitter.coded$clean , "http[[:graph:]]+", "LINK") #заменить mentions
+twitter.coded$clean <- str_replace_all(twitter.coded$clean , "@[[:word:]]+", "USERID") #заменить mentions
+twitter.coded$clean <- str_replace_all(twitter.coded$clean , "http[[:graph:]]+", "LINK") #заменить mentions
+twitter.coded$num_posts <- str_count(twitter.coded$clean, "\n") %>% as.numeric()
+twitter.coded$num_posts <- twitter.coded$num_posts + 1 #количество твитов пользователя
+
 twitter.coded$clean <- str_replace_all(twitter.coded$clean, "#", "HASHTAG")
 twitter.coded$clean <- str_replace_all(twitter.coded$clean, "[[:punct:]]", " ")
 twitter.coded$clean <- str_replace_all(twitter.coded$clean, "HASHTAG", "#")
 twitter.coded$clean <- str_replace_all(twitter.coded$clean, "[[:digit:]]", " ")
-twitter.coded$clean[1]
-#[:upper:]
+twitter.coded$clean <- str_replace_all(twitter.coded$clean, "<br/>", " ")
 
+
+#не учитываются смайлы и другие знаки пунктуации
+
+twitter.coded$clean[1]
+
+
+str_count(twitter.coded$clean, с()) %>% as.numeric()
+
+#[:upper:]
+#n()
 #https
 #количество mentions and retweets
 
-sentiment <- str_count(twitter.coded$all_tweets, rus_sentiments$phrase[rus_sentiments$sentiment=="negative"]) 
+sentiment <- str_count(twitter.coded$clean, rus_sentiments$phrase[rus_sentiments$sentiment=="negative"]) 
 
 texts_length <- str_length(twitter.coded$all_tweets)
 
 #dtm.extended <- cbind(looong=looong, dtm) %>% as.data.frame
-
-
-corp<-tm_map(corp, content_transformer(tolower)) # приведение к нижнему регистру
-corp <- tm_map(corp, content_transformer(gsub), pattern = "<br/>", replacement = " ")
-corp <- tm_map(corp, content_transformer(gsub), pattern = "[[]id[0-9]+[|][^]]+[]]", replacement = "USERID")
-corp<-tm_map(corp, removePunctuation) # удаляем пунктуацию
-corp<-tm_map(corp, removeNumbers) # удаляем числа
 
 ```
 
