@@ -28,10 +28,17 @@ dtm <- twitter.coded$all_tweets %>% str_replace_all('@[a-zA-Z0-9_]+', "@user") %
 dtm <- dtm %>% dfm_wordstem(language = "ru") %>% dfm_trim(min_docfreq=0.05) %>% as.data.frame #%>% dfm_weight(type="relmaxfreq") 
 
 looong <- str_count(twitter.coded$all_tweets, "\\w*([a-яА-Я])\\1\\1+\\w*") ##слова с удл. гласными
+#looong_punct <- str_count(twitter.coded$all_tweets, "\\w*([[]])\\1\\1+\\w*") ##слова с удл. гласными
 
-twitter.coded$clean <- str_to_lower(twitter.coded$all_tweets)
+twitter.coded$clean <- str_to_lower(twitter.coded$all_tweets) #нижний регистр
+twitter.coded$clean <- str_replace(twitter.coded$clean , "@[[:word:]]+", "USERID") #заменить mentions
+twitter.coded$clean <- str_replace(twitter.coded$clean , "http[[:graph:]]+", "LINK") #заменить mentions
+twitter.coded$clean <- str_replace_all(twitter.coded$clean, "#", "HASHTAG")
 twitter.coded$clean <- str_replace_all(twitter.coded$clean, "[[:punct:]]", " ")
-twitter.coded$clean <- str_replace_all(twitter.coded$clean, "[:digit:]", " ")
+twitter.coded$clean <- str_replace_all(twitter.coded$clean, "HASHTAG", "#")
+twitter.coded$clean <- str_replace_all(twitter.coded$clean, "[[:digit:]]", " ")
+twitter.coded$clean[1]
+#[:upper:]
 
 #https
 #количество mentions and retweets
