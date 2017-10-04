@@ -11,31 +11,96 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r}
 library(tidyverse)
-rus_sentiments <- read_delim("http://www.labinform.ru/pub/rusentilex/rusentilex_2017.txt", delim = ",", comment="!")
+library(quanteda)
+library(stringr)
+library(caret)
 
-texts <- read_csv("http://maslinsky.spb.ru/courses/cmta2017/data/full_corpus_done_for_seminar.csv")
-#texts <- read_csv("~/тексты/full_corpus_done_for_seminar.csv")
+#twitter.coded <- read_csv("http://maslinsky.spb.ru/courses/cmta2017/data/full_corpus_done_for_seminar.csv")
+twitter.coded <- read_csv("~/тексты/full_corpus_done_for_seminar.csv")
 set.seed(13)
+
+twitter.coded <- read_csv("~/тексты/full_corpus_done_for_seminar.csv")
+#write_csv(data.frame(text = twitter.coded$all_tweets), "texts.csv")
+
+
+dtm <- twitter.coded$all_tweets %>% str_replace_all('@[a-zA-Z0-9_]+', "@user") %>% tokens(what="word", remove_numbers=TRUE, remove_punct=FALSE, remove_separators=TRUE) %>% dfm 
+## стемминг, отбрасывание слов с частотностью меньше 10, взвешивание (опционально)
+dtm <- dtm %>% dfm_wordstem(language = "ru") %>% dfm_trim(min_docfreq=0.05) %>% as.data.frame #%>% dfm_weight(type="relmaxfreq") 
+
+looong <- str_count(twitter.coded$all_tweets, "\\w*([a-яА-Я])\\1\\1+\\w*") ##слова с удл. гласными
+
+twitter.coded$clean <- str_to_lower(twitter.coded$all_tweets)
+twitter.coded$clean <- str_replace_all(twitter.coded$clean, "[[:punct:]]", " ")
+twitter.coded$clean <- str_replace_all(twitter.coded$clean, "[:digit:]", " ")
+
+#https
+#количество mentions and retweets
+
+sentiment <- str_count(twitter.coded$all_tweets, rus_sentiments$phrase[rus_sentiments$sentiment=="negative"]) 
+
+texts_length <- str_length(twitter.coded$all_tweets)
+
+#dtm.extended <- cbind(looong=looong, dtm) %>% as.data.frame
+
+
+corp<-tm_map(corp, content_transformer(tolower)) # приведение к нижнему регистру
+corp <- tm_map(corp, content_transformer(gsub), pattern = "<br/>", replacement = " ")
+corp <- tm_map(corp, content_transformer(gsub), pattern = "[[]id[0-9]+[|][^]]+[]]", replacement = "USERID")
+corp<-tm_map(corp, removePunctuation) # удаляем пунктуацию
+corp<-tm_map(corp, removeNumbers) # удаляем числа
 
 ```
 
 
-Test and train 
+##Test and train 
 ```{r}
+dtm.extended_punct = dtm.extended[str_detect(names(dtm.extended), "[[:punct:]]")]
+dtm.extended = dtm.extended[!(str_detect(names(dtm.extended), "[[:punct:]]"))]
+names_punct = names(dtm.extended_punct)
+names(dtm.extended_punct) = paste("punct", 1:45, sep = "")
+dtm.extended = cbind(dtm.extended, dtm.extended_punct)
+
+
+rus_sentiments <- read_csv("~/russian-twitter/rus_sentiments.csv",  comment="#") 
+names(rus_sentiments) <- c('word', "type_of_speech", "lemma", "sentiment", "source", "ambiguity")
+
+
 split <- createDataPartition(y=twitter.coded$age, p = 0.9, list = FALSE)
-train <- age.dtm[split,]
-test <- age.dtm[-split,]
+train.data <- dtm.extended[split,]
+test.data <- dtm.extended[-split,]
 train.df <- twitter.coded[split,]
 test.df <- twitter.coded[-split,]
 
 ```
 
+## Gender prediction
 ```{r}
 #names(getModelInfo())
 
 ## параметры обучения: 10-fold кросс-валидация
-ctrl <- trainControl(method="cv", 10, verboseIter=TRUE)
+ctrl <- trainControl(method="cv", 4, verboseIter=TRUE)
 
+#model.lr <- train(train.data, train.df$sex, method="glmnet", family="binomial", trControl=ctrl)
+
+df_sex = cbind(sex = train.df$sex, train.data) 
+df_stage = cbind(sex = train.df$life_stage, train.data) 
+
+fit.ctree <- train(sex ~ ., data = df_sex, method='ctree', trControl=ctrl)
+fit.ctree
+
+#plot(fit.ctree)
+ctreeVarImp = varImp(fit.ctree)
+
+
+## логистическая регрессия
+predicted <- predict(fit.ctree, newdata=train.data)
+cm.lr <- confusionMatrix(data = predicted.sex.lr, reference = test.df$sex, positive="ж")
+cm.lr
+varImp(model.lr)
+
+
+
+#############
 library(rpart)
 tree <- rpart(Admission_YN ~ adm_data$Grad_Rec_Exam + adm_data$Grad_Per+ adm_data$Rank_of_col, data=adm_data,  method="class")
 
