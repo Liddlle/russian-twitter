@@ -1,12 +1,10 @@
-#install.packages("caret")
 library(caret)
 
 ########################
 ### Необходимые данные
 ########################
 ## загружаем размеченный корпус
-twitter.coded <- read.csv("../data/full_corpus_done_for_seminar.csv", header=TRUE, as.is=TRUE)
-
+twitter.coded <- read_csv("~/тексты/full_corpus_done_for_seminar.csv")
 
 ## Подготовка данных в quanteda (альтернатива к tm)
 library(quanteda)
@@ -16,27 +14,28 @@ library(dplyr)
 dtm <- twitter.coded$all_tweets %>% str_replace_all('@[a-zA-Z0-9_]+', "@user") %>% tokens(what="word", remove_numbers=TRUE, remove_punct=FALSE, remove_separators=TRUE) %>% dfm 
 
 ## стемминг, отбрасывание слов с частотностью меньше 10, взвешивание (опционально)
-dtm <- dtm %>% dfm_wordstem(language = "ru") %>% dfm_trim(min_count=10) #%>% dfm_weight(type="relmaxfreq") 
-age.dtm <- cbind(age=twitter.coded$age, dtm) %>% as.data.frame
+dtm <- dtm %>% dfm_wordstem(language = "ru") %>% dfm_trim(min_docfreq=0.05) %>% as.data.frame #%>% dfm_weight(type="relmaxfreq") 
 
 ################################
 ### Feature engeneering
 ################################
 looong <- str_count(twitter.coded$all_tweets, "\\w*([a-яА-Я])\\1\\1+\\w*")
-age.dtm <- cbind(looong=looong, dtm)
+dtm.extended <- cbind(looong=looong, dtm) %>% as.data.frame
+
 
 ###########################################
 ### Подготовка обучающей и тестовой выборки
 ###########################################
 
 ## зафиксируем случайные числа
-#set.seed(191)
+set.seed(2939)
 ## отберем 10% выборки для тестирования
-split <- createDataPartition(y=age.dtm$age, p = 0.9, list = FALSE)
-train <- age.dtm[split,]
-test <- age.dtm[-split,]
+split <- createDataPartition(y=twitter.coded$age, p = 0.9, list = FALSE)
+train.data <- dtm.extended[split,]
+test.data <- dtm.extended[-split,]
 train.df <- twitter.coded[split,]
 test.df <- twitter.coded[-split,]
+
 
 ###############################
 ## Обучение модели

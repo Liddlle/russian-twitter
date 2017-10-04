@@ -1,0 +1,61 @@
+---
+title: "Untitled"
+author: "VV"
+date: "04 10 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+rus_sentiments <- read_delim("http://www.labinform.ru/pub/rusentilex/rusentilex_2017.txt", delim = ",", comment="!")
+
+texts <- read_csv("http://maslinsky.spb.ru/courses/cmta2017/data/full_corpus_done_for_seminar.csv")
+#texts <- read_csv("~/тексты/full_corpus_done_for_seminar.csv")
+set.seed(13)
+
+```
+
+
+Test and train 
+```{r}
+split <- createDataPartition(y=twitter.coded$age, p = 0.9, list = FALSE)
+train <- age.dtm[split,]
+test <- age.dtm[-split,]
+train.df <- twitter.coded[split,]
+test.df <- twitter.coded[-split,]
+
+```
+
+```{r}
+#names(getModelInfo())
+
+## параметры обучения: 10-fold кросс-валидация
+ctrl <- trainControl(method="cv", 10, verboseIter=TRUE)
+
+library(rpart)
+tree <- rpart(Admission_YN ~ adm_data$Grad_Rec_Exam + adm_data$Grad_Per+ adm_data$Rank_of_col, data=adm_data,  method="class")
+
+plot(tree)
+text(tree, pretty=0)
+library(rpart.plot)
+fancyRpartPlot(tree)
+
+printcp(tree)
+plotcp(tree)
+
+ptree<- prune(tree, cp= tree$cptable[which.min(tree$cptable[,"xerror"]),"CP"])
+fancyRpartPlot(ptree, uniform=TRUE, main="Pruned Classification Tree")
+
+```
+
+random forests
+```{r}
+library(randomForest)
+
+```
+
+[](https://www.r-bloggers.com/random-forests-in-r/) 

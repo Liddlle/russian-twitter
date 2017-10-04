@@ -26,7 +26,7 @@ library(dplyr)
 dtm <- twitter.coded$all_tweets %>% str_replace_all('@[a-zA-Z0-9_]+', "@user") %>% tokens(what="word", remove_numbers=TRUE, remove_punct=FALSE, remove_separators=TRUE) %>% dfm 
 
 ## стемминг, отбрасывание слов с частотностью меньше 10, взвешивание (опционально)
-dtm <- dtm %>% dfm_wordstem(language = "ru") %>% dfm_trim(min_docfreq=0.05) #%>% dfm_weight(type="relmaxfreq") 
+dtm <- dtm %>% dfm_wordstem(language = "ru") %>% dfm_trim(min_docfreq=0.05) %>% as.data.frame #%>% dfm_weight(type="relmaxfreq") 
 
 ################################
 ### Feature engeneering
@@ -42,7 +42,7 @@ dtm.extended <- cbind(looong=looong, dtm) %>% as.data.frame
 ## зафиксируем случайные числа
 set.seed(2939)
 ## отберем 10% выборки для тестирования
-split <- createDataPartition(y=age.dtm$age, p = 0.9, list = FALSE)
+split <- createDataPartition(y=twitter.coded$age, p = 0.9, list = FALSE)
 train.data <- dtm.extended[split,]
 test.data <- dtm.extended[-split,]
 train.df <- twitter.coded[split,]
@@ -69,7 +69,7 @@ model.lr
 ## install.packages("naivebayes")
 ## Naive Bayes classifier
 model.nb <- train(train.data, train.df$sex, method="naive_bayes", trControl=ctrl)
-## glance at the model quality
+2## glance at the model quality
 model.nb
 
 
