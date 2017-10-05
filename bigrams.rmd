@@ -1,0 +1,160 @@
+---
+title: "bigrams"
+output: html_document
+---
+
+
+GGRPAH: http://www.data-imaginist.com/2017/Announcing-ggraph/
+TidyTextMining: http://tidytextmining.com/ ch5
+
+```{r setup, include=FALSE}
+library(tidytext)
+library(ggplot2)
+library(tm)
+library(RColorBrewer)
+library(tidyr)
+library(dplyr)
+library(igraph)
+library(stringr)
+```
+
+```{r}
+tweets.coded=read.csv("~/full_corpus_done_for_seminar.csv",encoding="UTF-8")
+
+#get rid of unnecessary spaces
+tweets.coded$all_tweets <- str_replace_all(tweets.coded$all_tweets," "," ")
+
+# Take out retweet header, there is only one
+tweets.coded$all_tweets <- str_replace(tweets.coded$all_tweets,"RT @[a-z,A-Z]*: ","")
+
+# Get rid of hashtags
+tweets.coded$all_tweets <- str_replace_all(tweets.coded$all_tweets,"#[a-z,A-Z]*","")
+
+# Get rid of references to other screennames
+tweets.coded$all_tweets <- str_replace_all(tweets.coded$all_tweets,"@[a-z,A-Z]*","")   
+
+tweets.coded$all_tweets = gsub(tweets.coded$all_tweets, pattern= "http://t.co/[a-z,A-Z,0-9]*{8}", replacement="LINK")
+
+#tweets.coded$all_tweets <- gsub(tweets.coded$all_tweets, pattern = "@[a-z,A-Z]*", replacement = "REPLY")
+tweets.coded$all_tweets <- gsub(tweets.coded$all_tweets, pattern = "[[]id[0-9]+[|][^]]+[]]", replacement = "@user")
+
+tweets.coded$all_tweets <-gsub(tweets.coded$all_tweets, pattern="https\\w+\\s+", replacement="link ")
+tweets.coded$all_tweets <-gsub(tweets.coded$all_tweets, pattern="https\\w+\\s+", replacement="link ") # сработало только так
+
+tweets.coded$all_tweets <- removePunctuation(tweets.coded$all_tweets)
+tweets.coded$all_tweets<-removeNumbers(tweets.coded$all_tweets)
+
+#head(tweets.coded$all_tweets,5)
+```
+
+```{r bigram}
+bigrams = tweets.coded %>%
+    unnest_tokens(bigram, all_tweets, token = "ngrams", n = 2)
+```
+
+```{r stopwords}
+bigrams_separated <- bigrams %>%
+  separate(bigram, c("word1", "word2"), sep = " ")
+
+str=stopwords(kind="russian")
+bigrams_filtered <- bigrams_separated %>%
+  filter(!word1 %in% str) %>%
+  filter(!word2 %in% str)
+
+ste=stopwords(kind="english")
+bigrams_filtered <- bigrams_filtered %>%
+  filter(!word1 %in% ste) %>%
+  filter(!word2 %in% ste)
+
+bigrams_counts <- bigrams_filtered %>% count(word1,word2,sort = TRUE)
+  
+# View(bigrams_counts)
+  
+bigrams_united <- bigrams_filtered %>%
+unite(bigram, word1, word2, sep = " ")
+
+# View(bigrams_united)
+```
+
+```{r tf-idf life stage}
+bigram_tf_idf_ls <- bigrams_united %>%
+  count(life_stage, bigram) %>%
+  bind_tf_idf(bigram, life_stage, n_col=n) %>%
+  arrange(desc(tf_idf))
+
+```
+```{r top-20 for life stage}
+plot_bigram <- bigram_tf_idf_ls %>% 
+  group_by(life_stage) %>% dplyr::arrange(-(n)) %>%
+  top_n(15) %>%
+  mutate(bigram = reorder(bigram, tf_idf))
+
+
+ggplot(plot_bigram, aes(bigram, tf_idf, fill = life_stage)) +
+  geom_bar(stat = "identity", show.legend = FALSE) +
+  labs(x = NULL, y = "tf-idf") +
+  facet_wrap(~life_stage, scales = "free") +
+  coord_flip()
+```
+
+```{r tf-idf sex}
+bigram_tf_idf <- bigrams_united %>%
+  count(sex, bigram) %>%
+  bind_tf_idf(bigram, sex, n_col=n) %>%
+  arrange(desc(tf_idf))
+
+```
+```{r top-20 for sex}
+plot_bigram <- bigram_tf_idf %>% 
+  group_by(sex) %>% dplyr::arrange(-(n)) %>%
+  top_n(15) %>%
+  mutate(bigram = reorder(bigram, tf_idf))
+
+ggplot(plot_bigram, aes(bigram, tf_idf, fill = sex)) +
+  geom_bar(stat = "identity", show.legend = FALSE) +
+  labs(x = NULL, y = "tf-idf") +
+  facet_wrap(~sex, scales = "free") +
+  coord_flip()
+```
+
+```{r you_can_delete_bigrams}
+plot_bigram <- bigram_tf_idf %>% filter(!bigram %in% "алисавстранечудес книги") %>% 
+  group_by(sex) %>% 
+  top_n(20) %>%
+  mutate(bigram = reorder(bigram, tf_idf))
+
+ggplot(plot_bigram, aes(bigram, tf_idf, fill = sex)) +
+  geom_bar(stat = "identity", show.legend = FALSE) +
+  labs(x = NULL, y = "tf-idf") +
+  facet_wrap(~sex, scales = "free") +
+  coord_flip()
+```
+
+```{r network}
+bigram_graph <- bigrams_counts %>% filter(n > 15) %>% 
+  graph_from_data_frame()
+library(ggraph)
+set.seed(13)
+```
+
+```{r network betweenness}
+a <- grid::arrow(type = "closed", length = unit(.1, "inches"))
+
+ggraph(bigram_graph, layout = "fr") +
+  geom_edge_link(aes(edge_alpha = n), show.legend = FALSE, arrow = a) +
+  geom_node_point(aes(size = degree(bigram_graph),
+                      ),color = "steelblue") +
+  geom_node_text(aes(label = name), color = 'black', vjust = 1, hjust = 1) +
+  theme_void()
+
+
+bc <- walktrap.community(bigram_graph)
+m = factor(membership(bc))
+
+ggraph(bigram_graph, layout = "fr") +
+  geom_edge_link(aes(edge_alpha = n), show.legend = FALSE, arrow = a) +
+  geom_node_point(aes(size = degree(bigram_graph),
+                      ,color = m)) +
+  geom_node_text(aes(label = name), color = 'black', vjust = 1, hjust = 1) +
+  theme_void()
+```
