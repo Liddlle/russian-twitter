@@ -1,0 +1,107 @@
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = F)
+library(tidyverse)
+library(quanteda)
+library(stringr)
+library(caret)
+```
+
+```{r eval= F}
+
+#twitter.coded <- read_csv("http://maslinsky.spb.ru/courses/cmta2017/data/full_corpus_done_for_seminar.csv")
+twitter.coded <- read_csv("~/тексты/full_corpus_done_for_seminar.csv")
+twitter.coded <- filter(twitter.coded, life_stage != "n/a" & life_stage != "студент/ работающий" & life_stage != "школьник/студент"  & life_stage != "учащийся" ) %>% factor(twitter.coded$life_stage) %>% droplevels() %>% forcats::fct_collapse(работающий = c("работающий","работаюший", "рабочий", "раотающий"), школьник = c("школьник", "школьница"))
+
+set.seed(13)
+
+rus_sentiments <- read_csv("~/russian-twitter/rus_sentiments.csv",  comment="#") 
+names(rus_sentiments) <- c('word', "type_of_speech", "lemma", "sentiment", "source", "ambiguity")
+
+dtm <- twitter.coded$all_tweets %>% str_replace_all('@[a-zA-Z0-9_]+', "@user") %>% tokens(what="word", remove_numbers=TRUE, remove_punct=FALSE, remove_separators=TRUE) %>% dfm 
+dtm <- dtm %>% dfm_wordstem(language = "ru") %>% dfm_trim(min_docfreq=0.05) %>% as.data.frame #%>% dfm_weight(type="relmaxfreq") 
+
+looong <- str_count(twitter.coded$all_tweets, "\\w*([a-яА-Я])\\1\\1+\\w*") ##слова с удл. гласными
+#looong_punct <- str_count(twitter.coded$all_tweets, "\\w*([[]])\\1\\1+\\w*") ##слова с удл. гласными
+
+twitter.coded$clean <- str_to_lower(twitter.coded$all_tweets) #нижний регистр
+twitter.coded$clean <- str_replace_all(twitter.coded$clean , "@[[:word:]]+", "USERID") #заменить mentions
+twitter.coded$mentions <- str_count(twitter.coded$clean, "USERID") %>% as.numeric()  #количество mentions -- в идеале хорошо бы уникальных посчитать))
+
+twitter.coded$clean <- str_replace_all(twitter.coded$clean , "http[[:graph:]]+", "LINK") #заменить сслылки
+twitter.coded$num_posts <- str_count(twitter.coded$clean, "\n") %>% as.numeric() + 1 #количество твитов пользователя
+
+twitter.coded$clean <- str_replace_all(twitter.coded$clean, "#", "HASHTAG")
+twitter.coded$hashtags <- str_count(twitter.coded$clean, "HASHTAG") %>% as.numeric()  #количество хэштегов
+
+twitter.coded$clean <- str_replace_all(twitter.coded$clean, "[[:punct:]]", " ")
+twitter.coded$clean <- str_replace_all(twitter.coded$clean, "HASHTAG", "#")
+
+twitter.coded$clean <- str_replace_all(twitter.coded$clean, "[[:digit:]]", " ")
+twitter.coded$clean <- str_replace_all(twitter.coded$clean, "<br/>", " ")
+
+twitter.coded$clean <- str_replace_all(twitter.coded$clean, '\\p{So}|\\p{Cn}', '')
+#не учитываются смайлы и другие знаки пунктуации
+twitter.coded$clean <- str_replace_all(twitter.coded$clean, '[[:space:]]+', ' ')
+
+#twitter.coded$clean[1]
+
+#[:upper:]
+
+#sentiment <- stringr::str_count(twitter.coded$clean[1], rus_sentiments$word[rus_sentiments$sentiment=="positive"] %>% paste(collapse = "|")) 
+
+
+sentiment2 <- twitter.coded$clean %>% map_dbl(~ stringr::str_count(.x, rus_sentiments$word[rus_sentiments$sentiment=="positive"] %>% paste(collapse = "|"))) 
+twitter.coded$positives = sentiment2
+
+sentiment3 <- twitter.coded$clean %>% map_dbl(~ stringr::str_count(.x, rus_sentiments$word[rus_sentiments$sentiment=="negative"] %>% paste(collapse = "|"))) 
+twitter.coded$negatives = sentiment3
+
+sentiment4 <- twitter.coded$clean %>% map_dbl(~ stringr::str_count(.x, rus_sentiments$word[rus_sentiments$sentiment=="neutral"] %>% paste(collapse = "|"))) 
+twitter.coded$neutral = sentiment4
+
+sentiment5 <- twitter.coded$clean %>% map_dbl(~ stringr::str_count(.x, rus_sentiments$word[rus_sentiments$sentiment == "positive/negative"] %>% paste(collapse = "|"))) 
+twitter.coded$positive_negative = sentiment5
+
+sentiment0 <-  dplyr::select(twitter.coded, positives, negatives, neutral, positive_negative) %>% rowSums()
+
+twitter.coded$sentiment_found = sentiment0
+
+#write_csv(twitter.coded, "~/russian-twitter/twitter.coded.csv")
+
+dtm.extended <- cbind(looong=looong, twitter.coded %>% select(num_posts:positive_negative), dtm) %>% as.data.frame
+
+```
+
+
+##Test and train 
+```{r}
+load("~/russian-twitter/data.RData")
+twitter.coded <- read_csv("~/russian-twitter/twitter.coded.csv")
+
+looong <- str_count(twitter.coded$all_tweets, "\\w*([a-яА-Я])\\1\\1+\\w*") ##слова с удл. гласными
+#looong_punct <- str_count(twitter.coded$all_tweets, "\\w*([[]])\\1\\1+\\w*") ##слова с удл. гласными
+dtm.extended <-  cbind(looong, dplyr::select(twitter.coded, num_posts:sentiment_found), dtm) %>% as.data.frame
+
+dtm.extended_punct = dtm.extended[str_detect(names(dtm.extended), "[[:punct:]]")]
+dtm.extended = dtm.extended[!(str_detect(names(dtm.extended), "[[:punct:]]"))]
+names_punct = names(dtm.extended_punct)
+names(dtm.extended_punct) = paste("punct", 1:45, sep = "")
+dtm.extended = cbind(dtm.extended, dtm.extended_punct)
+
+
+#names_unique <- names(dtm.extended) %>% as.data.frame()
+#names(names_unique) <- "name"
+#names_unique <- names_unique %>% group_by(name) %>% count()
+dtm.extended <- dtm.extended[!is.na(names(dtm.extended))]
+
+split <- createDataPartition(y=twitter.coded$age, p = 0.9, list = FALSE)
+train.data <- dtm.extended[split,]
+test.data <- dtm.extended[-split,]
+train.df <- twitter.coded[split,]
+test.df <- twitter.coded[-split,]
+
+
+
+save.image("~/russian-twitter/data2.RData")
+```
