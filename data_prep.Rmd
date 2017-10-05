@@ -11,7 +11,8 @@ library(caret)
 
 #twitter.coded <- read_csv("http://maslinsky.spb.ru/courses/cmta2017/data/full_corpus_done_for_seminar.csv")
 twitter.coded <- read_csv("~/тексты/full_corpus_done_for_seminar.csv")
-twitter.coded <- filter(twitter.coded, life_stage != "n/a" & life_stage != "студент/ работающий" & life_stage != "школьник/студент"  & life_stage != "учащийся" ) %>% factor(twitter.coded$life_stage) %>% droplevels() %>% forcats::fct_collapse(работающий = c("работающий","работаюший", "рабочий", "раотающий"), школьник = c("школьник", "школьница"))
+twitter.coded <- filter(twitter.coded, life_stage != "n/a" & life_stage != "студент/ работающий" & life_stage != "школьник/студент"  & life_stage != "учащийся" ) 
+twitter.coded$life_stage <- factor(twitter.coded$life_stage) %>% droplevels() %>% forcats::fct_collapse(работающий = c("работающий","работаюший", "рабочий", "раотающий"), школьник = c("школьник", "школьница"))
 
 set.seed(13)
 

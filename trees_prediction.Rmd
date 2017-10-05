@@ -45,6 +45,6 @@ save.image("~/russian-twitter/data3.RData")
 
 
 ```{r}
-load("~/russian-twitter/data2.RData")
+load("/students/aabakhitova/russian-twitter/data3.RData")
 ```
 
