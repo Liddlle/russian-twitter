@@ -19,37 +19,40 @@ library(stringr)
 ```
 
 ```{r}
-tweets.coded=read.csv("~/full_corpus_done_for_seminar.csv",encoding="UTF-8")
+tweets.coded.old=read.csv("~/full_corpus_done_for_seminar.csv",encoding="UTF-8")
+tweets.coded=read.csv("/students/aagolovchenko/text_analysis/data_new/corpus_with_mystem.csv")
 
 #get rid of unnecessary spaces
-tweets.coded$all_tweets <- str_replace_all(tweets.coded$all_tweets," "," ")
+tweets.coded$all_tweet_2 <- str_replace_all(tweets.coded$all_tweet_2," "," ")
 
 # Take out retweet header, there is only one
-tweets.coded$all_tweets <- str_replace(tweets.coded$all_tweets,"RT @[a-z,A-Z]*: ","")
+tweets.coded$all_tweet_2 <- str_replace(tweets.coded$all_tweet_2,"RT @[a-z,A-Z]*: ","")
 
 # Get rid of hashtags
-tweets.coded$all_tweets <- str_replace_all(tweets.coded$all_tweets,"#[a-z,A-Z]*","")
+tweets.coded$all_tweet_2 <- str_replace_all(tweets.coded$all_tweet_2,"#[a-z,A-Z]*","")
 
 # Get rid of references to other screennames
-tweets.coded$all_tweets <- str_replace_all(tweets.coded$all_tweets,"@[a-z,A-Z]*","")   
+tweets.coded$all_tweet_2 <- str_replace_all(tweets.coded$all_tweet_2,"@[a-z,A-Z]*","")   
 
-tweets.coded$all_tweets = gsub(tweets.coded$all_tweets, pattern= "http://t.co/[a-z,A-Z,0-9]*{8}", replacement="LINK")
+tweets.coded$all_tweet_2 = gsub(tweets.coded$all_tweet_2, pattern= "http://t.co/[a-z,A-Z,0-9]*{8}", replacement="LINK")
 
-#tweets.coded$all_tweets <- gsub(tweets.coded$all_tweets, pattern = "@[a-z,A-Z]*", replacement = "REPLY")
-tweets.coded$all_tweets <- gsub(tweets.coded$all_tweets, pattern = "[[]id[0-9]+[|][^]]+[]]", replacement = "@user")
+#tweets.coded$all_tweet_2 <- gsub(tweets.coded$all_tweet_2, pattern = "@[a-z,A-Z]*", replacement = "REPLY")
+tweets.coded$all_tweet_2 <- gsub(tweets.coded$all_tweet_2, pattern = "[[]id[0-9]+[|][^]]+[]]", replacement = "@user")
 
-tweets.coded$all_tweets <-gsub(tweets.coded$all_tweets, pattern="https\\w+\\s+", replacement="link ")
-tweets.coded$all_tweets <-gsub(tweets.coded$all_tweets, pattern="https\\w+\\s+", replacement="link ") # сработало только так
+tweets.coded$all_tweet_2 <-gsub(tweets.coded$all_tweet_2, pattern="https\\w+\\s+", replacement="link ")
+tweets.coded$all_tweet_2 <-gsub(tweets.coded$all_tweet_2, pattern="https\\w+\\s+", replacement="link ") # сработало только так
 
-tweets.coded$all_tweets <- removePunctuation(tweets.coded$all_tweets)
-tweets.coded$all_tweets<-removeNumbers(tweets.coded$all_tweets)
+tweets.coded$all_tweet_2 <- removePunctuation(tweets.coded$all_tweet_2)
+tweets.coded$all_tweet_2<-removeNumbers(tweets.coded$all_tweet_2)
 
-#head(tweets.coded$all_tweets,5)
+#head(tweets.coded$all_tweet_2,5)
+tweets.coded.old$all_tweet_2=tweets.coded$all_tweet_2
+tweets.coded=tweets.coded.old
 ```
 
 ```{r bigram}
 bigrams = tweets.coded %>%
-    unnest_tokens(bigram, all_tweets, token = "ngrams", n = 2)
+    unnest_tokens(bigram, all_tweet_2, token = "ngrams", n = 2)
 ```
 
 ```{r stopwords}
