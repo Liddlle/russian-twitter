@@ -72,15 +72,15 @@ load("~/russian-twitter/data.RData")
 
 n_words <- str_count(twitter.coded$all_tweet_2)
 
-ya <- sapply(twitter.coded$all_tweet_2, function(x) str_count(x, " я ")) / n_words
-my <- sapply(twitter.coded$all_tweet_2, function(x) str_count(x, " мы ")) / n_words
+mest_ya <- sapply(twitter.coded$all_tweet_2, function(x) str_count(x, " я ")) / n_words
+mest_my <- sapply(twitter.coded$all_tweet_2, function(x) str_count(x, " мы ")) / n_words
 
-ya_my <- ya/my
+ya_my <- mest_ya/mest_my
 
-on <- sapply(twitter.coded$all_tweet_2, function(x) str_count(x, " он ")) / n_words
-ona <- sapply(twitter.coded$all_tweet_2, function(x) str_count(x, " она ")) / n_words
+mest_on <- sapply(twitter.coded$all_tweet_2, function(x) str_count(x, " он ")) / n_words
+mest_ona <- sapply(twitter.coded$all_tweet_2, function(x) str_count(x, " она ")) / n_words
 
-on_ona <- on/ona
+on_ona <- mest_on/mest_ona
 
 ```
 
@@ -90,7 +90,7 @@ on_ona <- on/ona
 ```{r}
 
 looong <- str_count(twitter.coded$all_tweet_2, "\\w*([a-яА-Я])\\1\\1+\\w*") ##слова с удл. гласными
-dtm.extended <- cbind(looong, dplyr::select(twitter.coded, num_posts:sentiment_found), dtm, ya, my, ya_my, on, ona, on_ona) %>% as.data.frame
+dtm.extended <- cbind(looong, dplyr::select(twitter.coded, num_posts:sentiment_found), dtm, mest_ya, mest_my, ya_my, mest_on, mest_ona, on_ona) %>% as.data.frame
 
 dtm.extended_punct = dtm.extended[str_detect(names(dtm.extended), "[[:punct:]]")]
 dtm.extended = dtm.extended[!(str_detect(names(dtm.extended), "[[:punct:]]"))]

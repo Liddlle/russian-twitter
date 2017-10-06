@@ -14,7 +14,7 @@ library(caret)
 
 ## Gender prediction
 ```{r}
-load("~/russian-twitter/data2.RData")
+#load("~/russian-twitter/data2.RData")
 #names(getModelInfo())
 
 ## параметры обучения: 10-fold кросс-валидация
