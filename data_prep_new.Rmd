@@ -45,13 +45,6 @@ twitter.coded$clean <- str_replace_all(twitter.coded$clean, '\\p{So}|\\p{Cn}', '
 #не учитываются смайлы и другие знаки пунктуации
 twitter.coded$clean <- str_replace_all(twitter.coded$clean, '[[:space:]]+', ' ')
 
-#twitter.coded$clean[1]
-
-#[:upper:]
-
-#sentiment <- stringr::str_count(twitter.coded$clean[1], rus_sentiments$word[rus_sentiments$sentiment=="positive"] %>% paste(collapse = "|")) 
-
-
 sentiment2 <- twitter.coded$all_tweet_2 %>% map_dbl(~ stringr::str_count(.x, rus_sentiments$word[rus_sentiments$sentiment=="positive"] %>% paste(collapse = "|"))) 
 twitter.coded$positives = sentiment2
 
@@ -70,17 +63,34 @@ twitter.coded$sentiment_found = sentiment0
 
 dtm.extended <- cbind(looong=looong, twitter.coded %>% select(num_posts:positive_negative), dtm) %>% as.data.frame
 
+save.image("~/russian-twitter/data.RData")
 ```
+
+
+```{r}
+load("~/russian-twitter/data.RData")
+
+n_words <- str_count(twitter.coded$all_tweet_2)
+
+ya <- sapply(twitter.coded$all_tweet_2, function(x) str_count(x, " я ")) / n_words
+my <- sapply(twitter.coded$all_tweet_2, function(x) str_count(x, " мы ")) / n_words
+
+ya_my <- ya/my
+
+on <- sapply(twitter.coded$all_tweet_2, function(x) str_count(x, " он ")) / n_words
+ona <- sapply(twitter.coded$all_tweet_2, function(x) str_count(x, " она ")) / n_words
+
+on_ona <- on/ona
+
+```
+
 
 
 ##Test and train 
 ```{r}
-load("~/russian-twitter/data.RData")
-twitter.coded <- read_csv("~/russian-twitter/twitter.coded.csv")
 
-looong <- str_count(twitter.coded$all_tweets, "\\w*([a-яА-Я])\\1\\1+\\w*") ##слова с удл. гласными
-#looong_punct <- str_count(twitter.coded$all_tweets, "\\w*([[]])\\1\\1+\\w*") ##слова с удл. гласными
-dtm.extended <-  cbind(looong, dplyr::select(twitter.coded, num_posts:sentiment_found), dtm) %>% as.data.frame
+looong <- str_count(twitter.coded$all_tweet_2, "\\w*([a-яА-Я])\\1\\1+\\w*") ##слова с удл. гласными
+dtm.extended <- cbind(looong, dplyr::select(twitter.coded, num_posts:sentiment_found), dtm, ya, my, ya_my, on, ona, on_ona) %>% as.data.frame
 
 dtm.extended_punct = dtm.extended[str_detect(names(dtm.extended), "[[:punct:]]")]
 dtm.extended = dtm.extended[!(str_detect(names(dtm.extended), "[[:punct:]]"))]
@@ -88,10 +98,6 @@ names_punct = names(dtm.extended_punct)
 names(dtm.extended_punct) = paste("punct", 1:45, sep = "")
 dtm.extended = cbind(dtm.extended, dtm.extended_punct)
 
-
-#names_unique <- names(dtm.extended) %>% as.data.frame()
-#names(names_unique) <- "name"
-#names_unique <- names_unique %>% group_by(name) %>% count()
 dtm.extended <- dtm.extended[!is.na(names(dtm.extended))]
 
 split <- createDataPartition(y=twitter.coded$age, p = 0.9, list = FALSE)
@@ -99,8 +105,6 @@ train.data <- dtm.extended[split,]
 test.data <- dtm.extended[-split,]
 train.df <- twitter.coded[split,]
 test.df <- twitter.coded[-split,]
-
-
 
 save.image("~/russian-twitter/data2.RData")
 ```
