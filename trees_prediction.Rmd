@@ -25,10 +25,18 @@ ctrl <- trainControl(method="cv", 10, verboseIter=TRUE)
 df_sex = cbind(sex = train.df$sex, train.data) 
 
 fit.ctree <- train(sex ~ .-sex, data = df_sex, method='ctree', trControl=ctrl)
+
 fit.ctree
 
+plot(fit.ctree$finalModel)
+fancyRpartPlot(t$finalModel)
+
+
 #plot(fit.ctree)
-ctreeVarImp = varImp(fit.ctree)
+ctreeVarImp = varImp(fit.ctree, 20) %>% print
+ctreeVarImp
+plot(ctreeVarImp)
+
 ```
 
 Predicting life stage
@@ -37,14 +45,29 @@ df_stage <- cbind(life_stage = train.df$life_stage, train.data)
 df_stage <- na.omit(df_stage)
 fit.ctree2 <- train(life_stage ~ .-life_stage, data = df_stage, method='ctree', trControl=ctrl)
 fit.ctree2
+plot(fit.ctree$finalModel)
 
 #plot(fit.ctree)
-ctreeVarImp = varImp(fit.ctree)
+ctreeVarImp2 = varImp(fit.ctree2)
+plot(ctreeVarImp2)
 save.image("~/russian-twitter/data3.RData")
 ```
 
 
 ```{r}
 load("/students/aabakhitova/russian-twitter/data3.RData")
+
+
+load("/students/aagolovchenko/russian-twitter/data4.RData")
+
+library(rpart)
+library(rpart.plot)
+
+rpartFull <- rpart(sex ~ ., data = df_sex)
+rpart.plot(rpartFull, compress=F, ycompress= F,cex=.59, box.col=c("pink", "palegreen3"))
+
+rpartFull2 <- rpart(life_stage ~ ., data = df_stage)
+rpart.plot(rpartFull2, compress=F, ycompress= F,cex=.52, type = 2)
+
 ```
 
